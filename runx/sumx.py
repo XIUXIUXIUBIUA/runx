@@ -36,7 +36,8 @@ import argparse
 import time
 import json
 import csv
-
+import numpy as np
+import pandas as pd
 from .utils import read_config, get_cfg
 
 
@@ -56,6 +57,8 @@ parser.add_argument('--sortwith', '-s', type=str, default=None,
                     help='sort based on this metrics field')
 parser.add_argument('--csv', type=str, default=None,
                     help='Dump cvs file of results')
+parser.add_argument('--mafp', action='store_true',
+                    help='average or not')
 
 args = parser.parse_args()
 
@@ -163,7 +166,7 @@ def extract_nontime_metrics(m):
                 saw_final_metrics = True
                 for k, v in this_line_metrics.items():
                     if k not in skip_metrics:
-                        metric_dict[k] = v
+                        metric_dict[k] = float(v)
                     # make the assumption that validation step == epoch
                     if k == 'step' or k == 'epoch':
                         epochs = int(v)
@@ -380,12 +383,27 @@ def summarize_experiment(parent_dir):
 
     # We chop long strings into multiple lines if they contain '.' or '_'
     # This helps keep the output table more compact
+    origin_header = header.copy()
     header = [h.replace('.', '\n') for h in header]
     header = [h.replace('_', '\n') for h in header]
-
     table = [header] + tablebody
-    print(tabulate(table, headers='firstrow', floatfmt='1.2e'))
-
+    if(args.mafp):
+    # mafp code: average
+        table_pd = pd.DataFrame(tablebody,columns=origin_header,index=None)
+        if('seed' in origin_header):
+            table_pd.drop(labels=['seed','epoch'],inplace=True,axis=1)
+        group_header = uncommon_hparams_names.copy()
+        if('seed' in group_header):
+            group_header.remove('seed')
+        if(len(group_header)!=0):
+            group = table_pd.groupby(group_header)
+            print(group.mean())
+        else:
+            print(table_pd.mean())
+        
+    else:
+        print(tabulate(table, headers='firstrow', floatfmt='1.3e'))
+    # print(table_pd)
 
 def main():
 
