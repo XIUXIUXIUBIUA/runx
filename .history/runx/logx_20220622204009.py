@@ -142,7 +142,7 @@ class LogX(object):
         self.metrics_writer = csv.writer(self.metrics_fp, delimiter=',')
 
         # Log file
-        log_fn = os.path.join(self.logdir, 'logging.txt')
+        log_fn = os.path.join(self.logdir, 'logging.log')
         self.log_file = open(log_fn, mode='a+')
 
         # save metric
