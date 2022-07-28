@@ -39,7 +39,8 @@ import csv
 import numpy as np
 import pandas as pd
 from .utils import read_config, get_cfg
-
+# pd.set_option('display.max_columns',None)
+pd.set_option('display.max_rows',None)
 
 parser = argparse.ArgumentParser(
     description='Summarize run results',
@@ -59,6 +60,18 @@ parser.add_argument('--csv', type=str, default=None,
                     help='Dump cvs file of results')
 parser.add_argument('--mafp', action='store_true',
                     help='average or not')
+parser.add_argument('--up_filter', action='store_true',
+                    help='as higher as better')
+parser.add_argument('--down_filter', action='store_true',
+                    help='as lower as better')
+parser.add_argument('--metric', type=str,default='non0_f1-score',
+                    help='filter metric')                    
+parser.add_argument('--value', type=float,default='0.790',
+                    help='filter threshold')  
+parser.add_argument('--save_path',type=str,default='./',
+                    help='the path you want to save the file')
+parser.add_argument('--save',action='store_true',
+                    help='a switch to save the output files, sometimes the dataframe cannot show competely')
 
 args = parser.parse_args()
 
@@ -389,20 +402,43 @@ def summarize_experiment(parent_dir):
     table = [header] + tablebody
     if(args.mafp):
     # mafp code: average
-        table_pd = pd.DataFrame(tablebody,columns=origin_header,index=None)
+        table = pd.DataFrame(tablebody,columns=origin_header,index=None)
         if('seed' in origin_header):
-            table_pd.drop(labels=['seed','epoch'],inplace=True,axis=1)
+            if('modality' in origin_header):
+                table.drop(labels=['seed','epoch','modality'],inplace=True,axis=1)
+            else:
+                table.drop(labels=['seed','epoch'],inplace=True,axis=1)
         group_header = uncommon_hparams_names.copy()
         if('seed' in group_header):
             group_header.remove('seed')
+        if('modality' in group_header):
+            group_header.remove('modality')
         if(len(group_header)!=0):
-            group = table_pd.groupby(group_header)
-            print(group.mean())
+            group = table.groupby(group_header)
+            table = group.mean()
+            if(args.up_filter or args.down_filter):
+                if(args.up_filter):
+                    df_mask = table[args.metric]>=args.value
+                    table = table[df_mask]
+                    print(table)
+                else:
+                    df_mask = table[args.metric]<=args.value
+                    table = table[df_mask]
+                    print(table)
+            else:
+                print(table)
         else:
-            print(table_pd.mean())
+            print(table.mean()) # table.mean is an in-place operation, so we don't need mean again
+        if(args.save):
+            output_file = table
+            print(output_file)
+            output_file.to_csv(os.path.join(args.save_path,'table.csv'))
         
     else:
         print(tabulate(table, headers='firstrow', floatfmt='1.3e'))
+        if(args.save):
+            output_file = table
+            output_file.to_csv(os.path.join(args.save_path,'table.csv'))
     # print(table_pd)
 
 def main():
