@@ -31,7 +31,7 @@ from __future__ import print_function
 from collections import OrderedDict
 from coolname import generate_slug
 from datetime import datetime
-from shutil import copytree, ignore_patterns
+from shutil import copytree, ignore_patterns,copyfile
 
 import os
 import re
@@ -290,7 +290,10 @@ def run_yaml(experiment, runroot):
 
     # Calculate cross-product of hyperparams
     expanded_hparams, num_cases = cross_product_hparams(yaml_hparams)
-
+    # mafp: get folder path 
+    expdir = os.path.join(get_cfg('LOGROOT'), get_cfg('EXP_NAME'))
+    copyfile(args.exp_yml,os.path.join(expdir,'task.yml'))
+    
     # Run each permutation
     for i, hparam_vals in enumerate(expanded_hparams):
         hparam_vals = list(hparam_vals)
@@ -302,13 +305,14 @@ def run_yaml(experiment, runroot):
             continue
         get_tag(hparams)
 
+        # logdir is the detail log, expdir is a bigger one, named as yml file
         job_name, logdir, coolname, expdir = make_cool_names()
         resource_copy = resources.copy()
 
         """
         A few different modes of operation:
         1. interactive runs
-           a. copy local code to logdir under LOGROOT
+           a. copy local code to jogdir under LOGROOT
            b. cd to logdir, execute cmd
 
         2. farm submission: non-NGC
@@ -343,7 +347,7 @@ def run_yaml(experiment, runroot):
 
         # copy code to NFS-mounted share
         copy_code(logdir, runroot, code_ignore_patterns)
-
+        
         # save some meta-data from run
         save_cmd(cmd, logdir)
 
