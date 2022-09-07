@@ -290,9 +290,6 @@ def run_yaml(experiment, runroot):
 
     # Calculate cross-product of hyperparams
     expanded_hparams, num_cases = cross_product_hparams(yaml_hparams)
-    # mafp: get folder path 
-    expdir = os.path.join(get_cfg('LOGROOT'), get_cfg('EXP_NAME'))
-    copyfile(args.exp_yml,os.path.join(expdir,'task.yml'))
     
     # Run each permutation
     for i, hparam_vals in enumerate(expanded_hparams):
@@ -348,6 +345,11 @@ def run_yaml(experiment, runroot):
         # copy code to NFS-mounted share
         copy_code(logdir, runroot, code_ignore_patterns)
         
+        # mafp: get folder path 
+        copy_yml_path = os.path.join(expdir,'task.yml')
+        if(not os.path.exists(copy_yml_path)):
+            src_file_path = args.exp_yml
+            copyfile(src_file_path,copy_yml_path)
         # save some meta-data from run
         save_cmd(cmd, logdir)
 
