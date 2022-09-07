@@ -39,6 +39,7 @@ import csv
 import numpy as np
 import pandas as pd
 from .utils import read_config, get_cfg
+import pprint
 # pd.set_option('display.max_columns',None)
 pd.set_option('display.max_rows',None)
 
@@ -66,12 +67,14 @@ parser.add_argument('--down_filter', action='store_true',
                     help='as lower as better')
 parser.add_argument('--metric', type=str,default='non0_f1-score',
                     help='filter metric')                    
-parser.add_argument('--value', type=float,default='0.790',
+parser.add_argument('--value', type=float,default=0.790,
                     help='filter threshold')  
 parser.add_argument('--save_path',type=str,default='./',
                     help='the path you want to save the file')
 parser.add_argument('--save',action='store_true',
                     help='a switch to save the output files, sometimes the dataframe cannot show competely')
+parser.add_argument('--show_common_hparams',action='store_true',
+                    help='show the common hparameters of each run, including names and values')
 
 args = parser.parse_args()
 
@@ -296,6 +299,7 @@ def get_uncommon_hparam_names(all_runs):
 
     # find all items that ever have different values
     uncommon_list = []
+    common_dict = {}
     for k in all_hparams:
         all_values = []
         for hparams in all_runs.values():
@@ -305,8 +309,17 @@ def get_uncommon_hparam_names(all_runs):
                 all_values.append(None)
         if any_different(all_values) and k not in args.ignore:
             uncommon_list.append(k)
+        else: 
+            common_dict[k] = hparams[k]
 
-    return uncommon_list
+    return uncommon_list,common_dict
+
+# def get_common_hparam_names_values(all_runs):
+#     '''
+#     returns a list of common hparam names and values
+# 
+#     written by mafp
+#     '''
 
 
 def summarize_experiment(parent_dir):
@@ -321,6 +334,7 @@ def summarize_experiment(parent_dir):
 
     # dict of dicts of hparams
     hparams = get_hparams(runs)
+    # print(hparams.values())
 
     # dict of dicts of final test/val metrics
     metrics = get_metrics(runs)
@@ -330,8 +344,10 @@ def summarize_experiment(parent_dir):
         return
 
     # a list of hparams to list out
-    uncommon_hparams_names = get_uncommon_hparam_names(hparams)
-
+    uncommon_hparams_names,common_dict = get_uncommon_hparam_names(hparams)
+    # print(uncommon_hparams_names,common_dict)
+    if(args.show_common_hparams):
+        pprint.pprint(common_dict)
     # create header for table
     header = ['run']
     header += uncommon_hparams_names
@@ -451,7 +467,8 @@ def main():
         logroot = get_cfg('NGC_LOGROOT')
     else:
         logroot = get_cfg('LOGROOT')
-
+    
+    # print(args.dirs)
     for adir in args.dirs:
         full_path = os.path.join(logroot, adir)
         summarize_experiment(full_path)
